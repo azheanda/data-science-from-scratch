@@ -2,22 +2,30 @@ from bs4 import BeautifulSoup
 import requests
 import datetime
 from dateutil.relativedelta import relativedelta
+import pymongo
+
+client = pymongo.MongoClient()
+db = client.hackernews_database
+titlesByMonth = db.titlesByDate
 
 url_template = "http://www.daemonology.net/hn-daily/{0}.html"
-month = datetime.date(2010, 7, 1)
-current_month = datetime.date.today()
-titles = []
+curr_date = datetime.date(2010, 7, 11)
+today = datetime.date.today()
+num_of_titles = 0;
 
 
-while month < current_month:
-	print "Scraping month ", month.strftime("%Y-%m"), " ... ", len(titles), 	" articles found so far"
-	url = url_template.format(month.strftime("%Y-%m"))
+while curr_date < today:
+	curr_date_format = curr_date.strftime("%Y-%m-%d")
+	print "Scraping date ", curr_date_format, " ... ", num_of_titles, 	" articles found so far"
+	url = url_template.format(curr_date_format)
 	html = requests.get(url).text
 	soup = BeautifulSoup(html, "html5lib")
-	uls = soup('ul')
-	for ul in uls:
-		titles += [span.a.text for span in ul.find_all('span', 'storylink')]
-
-	month += relativedelta(months=1)
+	ul = soup.ul
+	record = { 'date': curr_date_format,
+			   'titles': [span.a.text for span in ul.find_all('span', 'storylink')]
+			  }
+	num_of_titles += len(record['titles'])
+	titlesByMonth.insert_one(record)
+	curr_date += relativedelta(days=1)
 
 
