@@ -6,7 +6,7 @@ import pymongo
 
 client = pymongo.MongoClient()
 db = client.hackernews_database
-titlesByMonth = db.titlesByDate
+titlesByDate = db.titlesByDate
 
 url_template = "http://www.daemonology.net/hn-daily/{0}.html"
 curr_date = datetime.date(2010, 7, 11)
@@ -25,7 +25,12 @@ while curr_date < today:
 			   'titles': [span.a.text for span in ul.find_all('span', 'storylink')]
 			  }
 	num_of_titles += len(record['titles'])
-	titlesByMonth.insert_one(record)
+	titlesByDate.insert_one(record)
 	curr_date += relativedelta(days=1)
 
 
+def dumpDataToDisk():
+	with open('titles.txt', 'w') as f:
+		for record in titlesByDate.find():
+			for title in record['titles']:
+				f.write(title.encode('utf-8') + "\n")

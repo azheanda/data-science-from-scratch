@@ -1,5 +1,6 @@
 from collections import defaultdict
 import re
+import math
 
 def count_words(training_set):
 	"""training_set contains pairs (title, interesting_to_ethan)"""
@@ -17,9 +18,9 @@ def tokenize(message):
 
 def word_probabilities(word_counts, total_interesting_messages, total_non_interesting_messages, k=1):
 	"""calculating triplets (word, P(word|interesing_to_ethan), P(word|~interesting_to_ethan))"""
-	return [ word,
+	return [ (word,
 	  (interesting + k) / (total_interesting_messages + 2*k),    #don't forget k
-	  (non_interesting + k) / (total_non_interesting_messages + 2*k),
+	  (non_interesting + k) / (total_non_interesting_messages + 2*k))
 	  for word, (interesting, non_interesting) in word_counts.iteritems()]
 
 def interesting_probablity(word_probs, message):
@@ -30,18 +31,27 @@ def interesting_probablity(word_probs, message):
 		if word in message_words:
 			log_prob_if_interesting += math.log(prob_if_interesting)
 			log_prob_if_not_interesting += math.log(prob_if_not_interesting)
-		else 
-			log_prob_if_interesting += math.log(1-prob_if_interesting)
-			log_prob_if_not_interesting += math.log(1-prob_if_not_interesting)
+		else: 
+			log_prob_if_interesting += math.log(1.0-prob_if_interesting)
+			log_prob_if_not_interesting += math.log(1.0-prob_if_not_interesting)
 
 	prob_if_interesting = math.exp(log_prob_if_interesting)
 	prob_if_not_interesting = math.exp(log_prob_if_not_interesting)
 	return prob_if_interesting/(prob_if_interesting + prob_if_not_interesting) #assuming prob of interesting and prob of non-interesting is the same
 
 class NaiveBayesClassifier:
-	def _init_(self, k = 1):
+	def __init__(self, k = 0.5):
 		self.k = k
 		self.word_probs = []
 
 	def train(self, training_set):
-		num_interesting = len([])
+		num_interesting = len([interesting_to_ethan for _, interesting_to_ethan in training_set if interesting_to_ethan])
+		num_not_interesting = len(training_set) - num_interesting
+
+		self.word_probs = word_probabilities(count_words(training_set), num_interesting, num_not_interesting, self.k)
+
+	def classify(self, message):
+		return interesting_probablity(self.word_probs, message)
+
+
+
